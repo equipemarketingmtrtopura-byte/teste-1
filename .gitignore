@@ -1,0 +1,9 @@
+# Arquivos do Windows
+Thumbs.db
+Desktop.ini
+
+# Atalhos
+*.lnk
+
+# Pasta AppData
+AppData/

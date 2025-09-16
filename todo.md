@@ -1,0 +1,21 @@
+- [ ] Fase 1: Análise do documento de requisitos
+- [ ] Fase 2: Planeamento da estrutura do projeto
+  - [x] Criar estrutura de diretórios
+  - [x] Configurar ambiente Django (backend)
+  - [x] Configurar ambiente React (frontend)
+- [ ] Fase 3: Implementação do projeto
+  - [x] Desenvolver o backend (modelos, views, serializers, URLs)
+  - [x] Desenvolver o frontend (componentes, páginas, integração com API)
+  - [x] Implementar autenticação e perfis de usuário
+  - [x] Implementar fluxo de requisição de manutenção
+  - [x] Implementar telas conforme requisitos
+  - [x] Implementar notificações
+- [ ] Fase 4: Teste e validação
+  - [x] Testes unitários e de integração
+  - [x] Testes de usabilidade
+- [ ] Fase 5: Entrega dos resultados
+  - [x] Documentação do projeto
+  - [x] Instruções de deploy
+  - [ ] Apresentação final
+
+
