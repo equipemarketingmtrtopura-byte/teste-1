@@ -7,3 +7,6 @@ Desktop.ini
 
 # Pasta AppData
 AppData/
+
+# Arquivos de ambiente - Contém chaves de API e segredos
+maintenance_request_system/backend/.env

@@ -1,30 +1,12 @@
-# Sistema de Requisição de Manutenção
+# Sistema de Requisição de Manutenção (Versão Segura)
 
-Sistema web desenvolvido para gestão de requisições de manutenção industrial, implementado conforme os requisitos especificados no documento T.I.
+Sistema web desenvolvido para gestão de requisições de manutenção industrial, implementado conforme os requisitos especificados no documento T.I. Esta versão foi revisada para incluir melhores práticas de segurança e uma configuração de ambiente mais robusta.
 
-## Funcionalidades Implementadas
-
-### 1. Autenticação e Perfis de Usuário
-- Sistema de login com diferentes perfis (Comum, Manutenção, TI)
-- Controle de acesso baseado em perfis
-- Sessão persistente
-
-### 2. Gestão de Requisições
-- Criação de novas requisições de manutenção
-- Visualização de requisições por usuário
-- Detalhamento completo das requisições
-- Filtros por status (Abertas, Em Atendimento, Concluídas)
-
-### 3. Fluxo de Trabalho
-- Estados da requisição: Aberta → Visualizada → Aceita → Em Atendimento → Concluída/Cancelada
-- Controle de responsáveis por manutenção
-- Histórico completo de ações
-
-### 4. Interface de Usuário
-- Design responsivo e intuitivo
-- Dashboard com estatísticas
-- Navegação clara entre funcionalidades
-- Formulários validados
+## Melhorias de Segurança Implementadas
+- **Configuração Segura**: Chaves secretas e configurações sensíveis foram movidas para um arquivo `.env`, fora do controle de versão.
+- **Controle de Acesso**: Foram corrigidas vulnerabilidades de controle de acesso (IDOR/BOLA), garantindo que usuários só possam ver e modificar as requisições que lhes pertencem ou para as quais têm permissão.
+- **Autenticação por Token**: O sistema agora usa autenticação por token, que é mais segura e adequada para SPAs (Single Page Applications).
+- **Limpeza de Código**: Arquivos duplicados e desnecessários foram removidos para maior clareza.
 
 ## Tecnologias Utilizadas
 
@@ -32,7 +14,7 @@ Sistema web desenvolvido para gestão de requisições de manutenção industria
 - **Django 4.2**: Framework web Python
 - **Django REST Framework**: API REST
 - **SQLite**: Base de dados (desenvolvimento)
-- **Django CORS Headers**: Suporte a CORS
+- **CORS Headers**: Suporte a CORS
 
 ### Frontend
 - **React 18**: Biblioteca JavaScript
@@ -41,142 +23,101 @@ Sistema web desenvolvido para gestão de requisições de manutenção industria
 - **Axios**: Cliente HTTP
 - **CSS3**: Estilização customizada
 
-## Estrutura do Projeto
+---
 
-```
-maintenance_request_system/
-├── backend/                    # Aplicação Django
-│   ├── maintenance_request_project/
-│   │   ├── settings.py        # Configurações do Django
-│   │   ├── urls.py           # URLs principais
-│   │   └── wsgi.py           # WSGI configuration
-│   └── maintenance/          # App principal
-│       ├── models.py         # Modelos de dados
-│       ├── views.py          # Views da API
-│       ├── serializers.py    # Serializers DRF
-│       ├── urls.py           # URLs da app
-│       └── admin.py          # Configuração do admin
-├── frontend/                  # Aplicação React
-│   ├── src/
-│   │   ├── components/       # Componentes React
-│   │   ├── services/         # Serviços de API
-│   │   ├── App.jsx          # Componente principal
-│   │   └── main.jsx         # Ponto de entrada
-│   ├── package.json         # Dependências Node.js
-│   └── vite.config.js       # Configuração Vite
-└── README.md                # Esta documentação
-```
-
-## Modelos de Dados
-
-### MaintenanceRequest
-- **numero_requisicao**: Número único da requisição
-- **titulo_curto**: Título resumido do problema
-- **descricao_problema**: Descrição detalhada
-- **status**: Estado atual (ABERTA, VISUALIZADA, ACEITA, EM_ATENDIMENTO, PARADA, CONCLUIDA, CANCELADA)
-- **tipo_manutencao**: Tipo (MECANICA, ELETRICA, OUTROS)
-- **status_operacional**: Estado do equipamento (FUNCIONANDO, ALERTA, INOPERANTE)
-- **prioridade**: Nível de prioridade (1-5)
-- **setor_solicitante**: Setor que solicitou
-- **equipamentos_impactados**: Lista de equipamentos
-- **outros_equipamentos**: Outros equipamentos relacionados
-- **prazo_limite**: Data limite para resolução
-- **solicitante**: Usuário que criou a requisição
-- **responsavel_manutencao**: Responsável pela execução
-- **data_criacao**: Data de criação
-- **data_atualizacao**: Última atualização
-
-### RequestHistory
-- **requisicao**: Referência à requisição
-- **usuario**: Usuário que executou a ação
-- **acao**: Tipo de ação realizada
-- **descricao**: Descrição da ação
-- **data_acao**: Data/hora da ação
-
-## Usuários de Teste
-
-O sistema inclui usuários pré-configurados para teste:
-
-1. **admin / admin123** (Perfil: TI)
-2. **manutencao / manutencao123** (Perfil: Manutenção)
-3. **usuario / usuario123** (Perfil: Comum)
-
-## Como Executar
+## Como Executar o Projeto
 
 ### Pré-requisitos
 - Python 3.11+
 - Node.js 18+
 - npm ou yarn
 
-### Backend (Django)
+---
+
+### **1. Configuração do Backend (Django)**
+
+**a. Navegue até a pasta do backend:**
 ```bash
-cd backend
-pip install django djangorestframework django-cors-headers
-python manage.py makemigrations
+cd maintenance_request_system/backend
+```
+
+**b. Crie e ative um ambiente virtual:**
+*No macOS/Linux:*
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+*No Windows:*
+```bash
+python -m venv venv
+.\\venv\\Scripts\\activate
+```
+
+**c. Instale as dependências:**
+```bash
+pip install -r requirements.txt
+```
+
+**d. Configure as variáveis de ambiente:**
+Crie um arquivo chamado `.env` na pasta `backend` (ao lado de `manage.py`). Copie o conteúdo abaixo e cole no novo arquivo.
+```env
+# SECURITY: Para produção, gere uma nova chave com 'python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"'
+SECRET_KEY='django-insecure-@p!7(5!y5z$b-a5&b_!t#j$y-w#c(v9$b3&n3@o#u)d5@e)y!a'
+
+# SECURITY: Mude para 'False' em ambiente de produção
+DEBUG=True
+```
+
+**e. Aplique as migrações do banco de dados:**
+```bash
 python manage.py migrate
-python manage.py createsuperuser  # Opcional
+```
+
+**f. Crie os usuários de teste (Opcional):**
+O sistema já vem com um banco de dados (`db.sqlite3`) que contém os usuários de teste. Se quiser começar do zero, apague o arquivo `db.sqlite3` e rode os comandos:
+```bash
+python manage.py migrate
+python manage.py createsuperuser # Para criar o admin 'admin'
+# Crie os outros usuários através da interface de admin
+```
+
+**g. Inicie o servidor do backend:**
+```bash
 python manage.py runserver 0.0.0.0:8000
 ```
-
-### Frontend (React)
-```bash
-cd frontend
-npm install
-npm run dev -- --host 0.0.0.0 --port 3000
-```
-
-### Acesso
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000/api/
-- Admin Django: http://localhost:8000/admin/
-
-## Funcionalidades por Perfil
-
-### Perfil Comum
-- Criar requisições de manutenção
-- Visualizar suas próprias requisições
-- Acompanhar status das requisições
-
-### Perfil Manutenção
-- Visualizar todas as requisições
-- Aceitar requisições
-- Atualizar status das requisições
-- Registar execução da manutenção
-
-### Perfil TI
-- Acesso completo ao sistema
-- Gestão de usuários (via admin)
-- Relatórios e estatísticas
-
-## Conformidade com Requisitos
-
-O sistema atende a todos os requisitos especificados no documento T.I.:
-
-✅ **R1**: Sistema de autenticação implementado  
-✅ **R2**: Perfis de usuário diferenciados  
-✅ **R3**: Formulário de requisição completo  
-✅ **R4**: Fluxo de estados implementado  
-✅ **R5**: Controle de responsáveis  
-✅ **R6**: Histórico de ações  
-✅ **R7**: Interface web responsiva  
-✅ **R8**: Validação de dados  
-✅ **R9**: Notificações de status  
-✅ **R10**: Relatórios básicos (dashboard)
-
-## Melhorias Futuras
-
-- Integração com base de dados PostgreSQL/MySQL
-- Sistema de notificações por email
-- Relatórios avançados e exportação
-- Upload de anexos (fotos, documentos)
-- API mobile
-- Integração com sistemas ERP
-- Notificações push em tempo real
-
-## Suporte
-
-Para questões técnicas ou melhorias, contacte a equipa de desenvolvimento.
+O servidor da API estará rodando em `http://localhost:8000`.
 
 ---
-*Desenvolvido conforme especificações do documento T.I.*
 
+### **2. Configuração do Frontend (React)**
+
+**a. Em um novo terminal, navegue até a pasta do frontend:**
+```bash
+cd maintenance_request_system/frontend
+```
+
+**b. Instale as dependências:**
+```bash
+npm install
+```
+
+**c. Inicie o servidor de desenvolvimento:**
+```bash
+npm run dev -- --host 0.0.0.0 --port 3000
+```
+A aplicação estará acessível em `http://localhost:3000`.
+
+---
+
+## Usuários de Teste
+
+Use os seguintes usuários para testar os diferentes perfis de acesso:
+
+1.  **admin / admin123** (Perfil: TI)
+2.  **manutencao / manutencao123** (Perfil: Manutenção)
+3.  **usuario / usuario123** (Perfil: Comum)
+
+## Acesso
+- **Frontend**: `http://localhost:3000`
+- **Backend API**: `http://localhost:8000/api/`
+- **Admin Django**: `http://localhost:8000/admin/`
