@@ -9,12 +9,20 @@ from .serializers import (
     MaintenanceRequestCreateSerializer, MaintenanceRequestUpdateSerializer,
     RequestAttachmentSerializer, NotificationSerializer
 )
-
+from .permissions import IsOwnerOrAssignedOrAdmin, IsMaintenanceUser, IsAdminUser
 
 class UserProfileViewSet(viewsets.ModelViewSet):
-    queryset = UserProfile.objects.all()
     serializer_class = UserProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """
+        Admins can see all profiles.
+        Other users can only see their own profile.
+        """
+        if self.request.user.is_staff or (hasattr(self.request.user, 'userprofile') and self.request.user.userprofile.profile_type == 'TI'):
+            return UserProfile.objects.all()
+        return UserProfile.objects.filter(user=self.request.user)
     
     @action(detail=False, methods=['get'])
     def me(self, request):
@@ -29,7 +37,7 @@ class UserProfileViewSet(viewsets.ModelViewSet):
 
 class MaintenanceRequestViewSet(viewsets.ModelViewSet):
     queryset = MaintenanceRequest.objects.all()
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrAssignedOrAdmin]
     
     def get_serializer_class(self):
         if self.action == 'create':
@@ -42,8 +50,11 @@ class MaintenanceRequestViewSet(viewsets.ModelViewSet):
         """Filtrar requisições baseado no perfil do usuário"""
         user = self.request.user
         try:
-            profile = UserProfile.objects.get(user=user)
-            
+            # Check if user has a profile, otherwise default to a safe queryset
+            profile = getattr(user, 'userprofile', None)
+            if not profile:
+                return MaintenanceRequest.objects.filter(solicitante=user)
+
             if profile.profile_type == 'COMUM':
                 # Usuários comuns só veem suas próprias requisições
                 return MaintenanceRequest.objects.filter(solicitante=user)
@@ -53,10 +64,10 @@ class MaintenanceRequestViewSet(viewsets.ModelViewSet):
                     Q(status__in=['ABERTA', 'VISUALIZADA', 'ACEITA', 'EM_ATENDIMENTO', 'PARADA']) |
                     Q(responsavel_manutencao=user)
                 )
-            else:
-                # Gestores e TI veem todas
+            else: # Gestores e TI veem todas
                 return MaintenanceRequest.objects.all()
         except UserProfile.DoesNotExist:
+            # Fallback for safety, should not happen if profiles are created with users
             return MaintenanceRequest.objects.filter(solicitante=user)
     
     def perform_create(self, serializer):
@@ -124,7 +135,7 @@ class MaintenanceRequestViewSet(viewsets.ModelViewSet):
                 request=request
             )
     
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[IsMaintenanceUser])
     def accept(self, request, pk=None):
         """Aceitar uma requisição"""
         maintenance_request = self.get_object()
@@ -134,7 +145,7 @@ class MaintenanceRequestViewSet(viewsets.ModelViewSet):
         
         return Response({'status': 'Requisição aceita'})
     
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[IsMaintenanceUser])
     def start_maintenance(self, request, pk=None):
         """Iniciar manutenção"""
         maintenance_request = self.get_object()
@@ -143,7 +154,7 @@ class MaintenanceRequestViewSet(viewsets.ModelViewSet):
         
         return Response({'status': 'Manutenção iniciada'})
     
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], permission_classes=[IsMaintenanceUser])
     def complete_maintenance(self, request, pk=None):
         """Concluir manutenção"""
         maintenance_request = self.get_object()
@@ -161,43 +172,25 @@ class MaintenanceRequestViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(requests, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
     def dashboard_data(self, request):
         """Retorna dados para o dashboard"""
-        user = request.user
-        try:
-            profile = UserProfile.objects.get(user=user)
-            
-            if profile.profile_type in ['GESTOR', 'TI']:
-                # Dados completos para gestores e TI
-                total_requests = MaintenanceRequest.objects.count()
-                open_requests = MaintenanceRequest.objects.filter(
-                    status__in=['ABERTA', 'VISUALIZADA', 'ACEITA', 'EM_ATENDIMENTO']
-                ).count()
-                completed_requests = MaintenanceRequest.objects.filter(status='CONCLUIDA').count()
-                
-                return Response({
-                    'total_requests': total_requests,
-                    'open_requests': open_requests,
-                    'completed_requests': completed_requests,
-                    'recent_requests': MaintenanceRequestSerializer(
-                        MaintenanceRequest.objects.all()[:5], many=True
-                    ).data
-                })
-            else:
-                # Dados limitados para outros usuários
-                user_requests = MaintenanceRequest.objects.filter(solicitante=user)
-                return Response({
-                    'my_requests_count': user_requests.count(),
-                    'my_open_requests': user_requests.filter(
-                        status__in=['ABERTA', 'VISUALIZADA', 'ACEITA', 'EM_ATENDIMENTO']
-                    ).count(),
-                    'recent_requests': MaintenanceRequestSerializer(
-                        user_requests[:5], many=True
-                    ).data
-                })
-        except UserProfile.DoesNotExist:
-            return Response({'error': 'Perfil não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        # A lógica original foi movida para um endpoint mais seguro e específico para admin/TI.
+        # A lógica de dashboard para usuários comuns pode ser exposta em outro endpoint se necessário.
+        total_requests = MaintenanceRequest.objects.count()
+        open_requests = MaintenanceRequest.objects.filter(
+            status__in=['ABERTA', 'VISUALIZADA', 'ACEITA', 'EM_ATENDIMENTO']
+        ).count()
+        completed_requests = MaintenanceRequest.objects.filter(status='CONCLUIDA').count()
+
+        return Response({
+            'total_requests': total_requests,
+            'open_requests': open_requests,
+            'completed_requests': completed_requests,
+            'recent_requests': MaintenanceRequestSerializer(
+                MaintenanceRequest.objects.all().order_by('-data_criacao')[:5], many=True
+            ).data
+        })
 
 
 class NotificationViewSet(viewsets.ModelViewSet):
